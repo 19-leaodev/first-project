@@ -1,0 +1,100 @@
+const apikeyinput = document.getElementById('apikey');
+  const gameselect = document.getElementById('gameselect');
+  const questionInput = document.getElementById('questionInput');
+  const askbutton = document.getElementById('askButton');
+  const airesponse = document.getElementById('airesponse');
+  const form = document.getElementById('form');
+
+  const markdownToHTML = (text) => {
+    const converter = new shawdown.converter()
+    return converter.makehtml(text)
+  }
+
+  
+  const perguntarAI = async (question, game, apikey) => {
+    const model = "gemini-2.0-flash"
+    const geminiURL = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apikey}`
+    const pergunta = `
+     ## Especialidade
+     Você é um especialista assistente de meta para jogo ${game}
+
+     ## Tarefa
+     Você deve responder as perguntas do usuário com base no seu conhecimento do jogo, estratégias, build e dicas
+
+     ## Regras 
+     - Se você não sabe a resposta, responda com 'Não sei'e não tente inventar uma resposta.
+     - Se a pergunta não esta relacionada ao jogo, responda com 'Essa pergunta não está relacionada ao jogo'
+     - Considere a data atual ${new Date().toLocaleDateString()}
+     - Faça pesquisa atualizadas sobre o patch atual, baseado na data atual, para dar uma resposta coerente
+     - Nunca responda item que você não tenha certeza que existe no patch atual.
+
+     ## Respostas
+     -Economize na resposta, seja direto e responda no máximo 500 caracteres. Responda em Markdown
+     - Não precisa fazer nenhuma saudação ou despedida, apenas responda oque o usuario esta pedindo.
+
+     ## Exemplo de resposta
+     - Pergunta do usuario: Melhor build rengar jungle
+     resposta: A build mais atual é: \n\n **itens:**\n\n coloque os itens aqui.\n\m **runer:**\n\nexemplo
+    `
+
+
+    const contents = [{
+      role: "user",
+      parts: [{
+        text: pergunta
+      }]
+    }]
+
+    const tools= [{
+      google_search:{}
+    }]
+
+    const response = await fetch(geminiURL, {
+      method: 'POST',
+      Headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents,
+        tools
+      })
+    })
+
+    const data = await response.json()
+    return data.candidates[0].contents.parts[0].text
+    
+    const enviarformulario = async (event) => {
+    event.preventDefault();
+
+    // A LINHA 15 (agora ajustada pela posição dentro do DOMContentLoaded)
+    const apikey = apikeyinput.value;
+    const game = gameselect.value; // Esta linha deve funcionar agora
+    const question = questionInput.value;
+
+  
+
+    if (apikey === '' || game === '' || question === '') {
+      alert('Por favor, preencher todos os campos');
+      return}
+
+    askbutton.disabled = true;
+    askbutton.textContent = 'Perguntando...';
+    askbutton.classList.add('loading');
+
+    try {
+      const text = await perguntarAI(question, game, apikey)
+      airesponse.querySelector('.response-content').innerHTML = text
+      markdownToHTML(text)
+      airesponse.classList.remove('hidden')
+
+    } catch (error) {
+      console.log('Erro:', error);
+    } finally {
+      askbutton.disabled = false;
+      askbutton.textContent = "Perguntar";
+      askbutton.classList.remove('loading');
+    }
+   
+
+  form.addEventListener('submit', enviarformulario)
+  }}
